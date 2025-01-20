@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Positioning Types</title>
+    <style>
+        /* Body styling for scrolling and centering */
+        body {
+            margin: 0;
+            padding: 0;
+            height: 500vh;  /* Allows vertical scrolling */
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .box {
+            width: 100px;
+            height: 100px;
+            margin: 20px;
+            text-align: center;
+            line-height: 100px;
+            color: black;
+            font-weight: bold;
+            font-size: 14px;
+            border-radius: 8px;
+            position: absolute;  /* All boxes are positioned absolutely for full control */
+        }
+
+        /* Static positioning */
+        .static {
+            background-color: gray;
+            top: 10%;
+            left: 10%;
+        }
+
+        /* Relative positioning */
+        .relative {
+            background-color: blue;
+            top: 10%;
+            left: 40%;
+            position: relative;
+        }
+
+        /* Absolute positioning */
+        .absolute {
+            background-color: green;
+            top: 50%;
+            left: 10%;
+        }
+
+        /* Fixed positioning */
+        .fixed {
+            background-color: red;
+            top: 80%;
+            left: 40%;
+            position: fixed;  /* Stays fixed in place while scrolling */
+        }
+
+        /* Sticky positioning */
+        .sticky {
+            background-color: violet;
+            top: 50%;
+            left: 40%;
+            position: sticky;
+            top: 100px; /* Sticks after scrolling */
+        }
+    </style>
+</head>
+<body>
+    <div class="box static">Static</div>
+    <div class="box relative">Relative</div>
+    <div class="box absolute">Absolute</div>
+    <div class="box fixed">Fixed</div>
+    <div class="box sticky">Sticky</div>
+</body>
+</html>
