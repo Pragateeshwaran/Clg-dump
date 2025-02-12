@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form with All Input Types</title>
+</head>
+<body>
+
+<h2>Sample Form with All Input Types</h2>
+
+<form action="/submit" method="POST">
+    <!-- Text Input -->
+    <label for="name">Name:</label><br>
+    <input type="text" id="name" name="name" required><br><br>
+
+    <!-- Email Input -->
+    <label for="email">Email:</label><br>
+    <input type="email" id="email" name="email" required><br><br>
+
+    <!-- Password Input -->
+    <label for="password">Password:</label><br>
+    <input type="password" id="password" name="password" required><br><br>
+
+    <!-- Number Input -->
+    <label for="age">Age:</label><br>
+    <input type="number" id="age" name="age" min="18" max="100" required><br><br>
+
+    <!-- Date Input -->
+    <label for="dob">Date of Birth:</label><br>
+    <input type="date" id="dob" name="dob" required><br><br>
+
+    <!-- Tel Input -->
+    <label for="phone">Phone Number:</label><br>
+    <input type="tel" id="phone" name="phone" pattern="[0-9]{10}" required><br><br>
+
+    <!-- URL Input -->
+    <label for="website">Website:</label><br>
+    <input type="url" id="website" name="website"><br><br>
+
+    <!-- File Input -->
+    <label for="file">Upload File:</label><br>
+    <input type="file" id="file" name="file"><br><br>
+
+    <!-- Color Input -->
+    <label for="favcolor">Favorite Color:</label><br>
+    <input type="color" id="favcolor" name="favcolor" value="#ff0000"><br><br>
+
+    <!-- Radio Buttons -->
+    <label>Gender:</label><br>
+    <input type="radio" id="male" name="gender" value="male">
+    <label for="male">Male</label><br>
+    <input type="radio" id="female" name="gender" value="female">
+    <label for="female">Female</label><br><br>
+
+    <!-- Checkbox Input -->
+    <label for="subscribe">Subscribe to Newsletter:</label><br>
+    <input type="checkbox" id="subscribe" name="subscribe" value="yes"><br><br>
+
+    <!-- Select Dropdown -->
+    <label for="country">Country:</label><br>
+    <select id="country" name="country">
+        <option value="usa">USA</option>
+        <option value="canada">Canada</option>
+        <option value="uk">UK</option>
+    </select><br><br>
+
+    <!-- Textarea -->
+    <label for="message">Message:</label><br>
+    <textarea id="message" name="message" rows="4" cols="50" required></textarea><br><br>
+
+    <!-- Submit Button -->
+    <input type="submit" value="Submit">
+</form>
+
+</body>
+</html>

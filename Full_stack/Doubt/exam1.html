@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Relative vs Absolute Positioning Explained</title>
+  <style>
+    /* The container acts like our picture frame.
+       It is set to position: relative to serve as a reference for absolutely positioned items. */
+    .container {
+      position: relative;
+      border: 2px solid black;
+      padding: 20px;
+      margin: 20px;
+      height: 200px; /* Just to see a fixed area */
+    }
+
+    /* This box is in the normal document flow (like a picture hung in a sequence on the wall). */
+    .normal-box {
+      background-color: lightblue;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    /* This box is relatively positioned.
+       It moves 30px to the right visually, but its original spot is still 'reserved'.
+       Think of it as sliding a picture along the wall - the space where it was originally is still kept in mind. */
+    .relative-box {
+      position: relative;
+      left: 30px; /* Moves the element 30px to the right from its original position */
+      background-color: lightgreen;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    /* This box is absolutely positioned.
+       It is taken out of the normal document flow, like placing a picture on the table.
+       It will be positioned relative to the container (our frame), starting from 10px from the top and left. */
+    .absolute-box {
+      position: absolute;
+      top: 10px;
+      left: 90px;
+      background-color: lightcoral;
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- This is like a picture placed normally on the wall. -->
+    <div class="normal-box">Normal Flow Element</div>
+    hi
+    <!-- This is like a picture that is slid over a bit but still 'keeps' its original position in the lineup. -->
+    <div class="relative-box">
+      Relative Positioned (shifted 30px right)
+    </div>
+    
+    <!-- This is like a picture placed on the table in front of the wall,
+         independent of the other pictures' positions. It might overlap them. -->
+    <div class="absolute-box">
+      Absolute Positioned (10px from top & left of container)
+    </div>
+  </div>
+</body>
+</html>

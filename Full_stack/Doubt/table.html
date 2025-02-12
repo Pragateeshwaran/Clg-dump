@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML Table Example</title>
+</head>
+<body>
+
+<table border="1">
+    <!-- Table caption -->
+    <caption>Employee Information</caption>
+    
+    <!-- Table header -->
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Position</th>
+            <th>Department</th>
+        </tr>
+    </thead>
+
+    <!-- Table body -->
+    <tbody>
+        <tr>
+            <td>John Doe</td>
+            <td>Software Engineer</td>
+            <td>Development</td>
+        </tr>
+        <tr>
+            <td>Jane Smith</td>
+            <td>Project Manager</td>
+            <td>Operations</td>
+        </tr>
+        <tr>
+            <td>David Lee</td>
+            <td>UX Designer</td>
+            <td>Design</td>
+        </tr>
+        <tr>
+            <!-- Using rowspan to combine cells for a multi-line entry -->
+            <td rowspan="2">Alice Johnson</td>
+            <td>Business Analyst</td>
+            <td>Analysis</td>
+        </tr>
+        <tr>
+            <td>Senior Analyst</td>
+            <td>Analysis</td>
+        </tr>
+    </tbody>
+
+    <!-- Table footer -->
+    <tfoot>
+        <tr>
+            <td colspan="3">End of Report</td>
+        </tr>
+        <tr>
+            <td colspan="2">Total Employees</td>
+            <td>5</td>
+        </tr>
+    </tfoot>
+</table>
+
+</body>
+</html>
