@@ -1,0 +1,385 @@
+Sure! Here's the solution to each of the questions:
+
+### **Part-A (5 x 2 = 10 Marks)**
+
+**1. Describe Semantic versioning in Node.js**  
+Semantic Versioning (SemVer) is a versioning system used in Node.js to manage software versions. It follows the `MAJOR.MINOR.PATCH` format:  
+- **MAJOR** version: Incremented for incompatible API changes.  
+- **MINOR** version: Incremented for added functionality that is backward-compatible.  
+- **PATCH** version: Incremented for backward-compatible bug fixes.  
+
+For example: `1.4.2` means:  
+- **1** → Major version (Significant changes)  
+- **4** → Minor version (New features without breaking changes)  
+- **2** → Patch version (Bug fixes only)  
+
+---
+
+**2. List any four operating system utility functions available in the OS module.**  
+The `os` module in Node.js provides several OS-related utility functions. Some key functions include:  
+- `os.type()` → Returns the operating system name.  
+- `os.platform()` → Returns the operating system platform (e.g., 'win32', 'linux').  
+- `os.cpus()` → Provides information about each CPU core.  
+- `os.totalmem()` → Returns the total system memory in bytes.  
+
+---
+
+**3. Describe Auditing Package Security with NPM.**  
+NPM offers a security audit feature to identify vulnerabilities in dependencies. To audit a project:  
+- Run `npm audit` to scan dependencies for security risks.  
+- Use `npm audit fix` to automatically fix vulnerabilities if possible.  
+- The audit helps developers keep packages secure and up to date.  
+
+---
+
+**4. Use a callback function to handle asynchronous operation.**  
+Here's the corrected code to use a callback with `fs.readFile`:  
+
+```javascript
+const fs = require('fs');
+
+fs.readFile('myfile.txt', 'utf8', (err, data) => {
+    if (err) {
+        console.error('Error reading file:', err);
+        return;
+    }
+    console.log('File content:', data);
+});
+```
+
+---
+
+**5. Write a node.js program to replace two or more a's with the letter b on the given string using Regular Expression.**  
+Here's the solution using RegEx in Node.js:
+
+```javascript
+const str = "aaaabc aaaa def a";
+const result = str.replace(/a{2,}/g, 'b');
+console.log(result);  // Output: "bbc b def a"
+```
+
+---
+
+### **Part-B (8+8+16=40 Marks)**
+
+**6 (a)(i) Consider a given JSON object, write a Node.js program to print the given object's properties, delete the second property, and get the length of the object.**  
+
+```javascript
+const user = {
+    first_name: "John",
+    last_name: "Smith",
+    age: "38",
+    department: "Software"
+};
+
+// Print properties
+console.log("Properties:", Object.keys(user));
+
+// Delete second property
+delete user.last_name;
+
+// Get the length of the object
+console.log("Updated object:", user);
+console.log("Length of the object:", Object.keys(user).length);
+```
+
+---
+
+**6 (a)(ii) Write a program in Node.js to parse the given URL.**  
+
+```javascript
+const url = require('url');
+
+const parsedUrl = url.parse('https://api.example.com/data?user=JohnDoe&id=123', true);
+
+console.log('Protocol:', parsedUrl.protocol);
+console.log('Host:', parsedUrl.host);
+console.log('Pathname:', parsedUrl.pathname);
+console.log('Query Parameters:', parsedUrl.query);
+```
+
+---
+
+**6 (a)(iii) Use Promise chaining to handle multiple asynchronous operations.**  
+
+```javascript
+fetch('https://api.example.com/data')
+    .then(response => response.json())
+    .then(data => {
+        console.log('Data:', data);
+    })
+    .catch(error => {
+        console.error('Error fetching data:', error);
+    });
+```
+
+---
+
+If you need explanations or additional concepts, feel free to ask!
+
+Here are the answers for the questions in the image:
+
+---
+
+### **6(b) Write a React code to create and render the given HTML elements in a web page.**
+
+```jsx
+import React from 'react';
+
+function App() {
+    return (
+        <div>
+            <ul>
+                <li>Coffee</li>
+                <li>Tea</li>
+                <li>Milk</li>
+            </ul>
+            <img src="pic_trulli.jpg" alt="Italian Trulli" />
+        </div>
+    );
+}
+
+export default App;
+```
+
+---
+
+### **7(a)(i) Write a Node.js program using the ‘nodemailer’ module and implement a simple mail application.**
+
+```javascript
+const nodemailer = require('nodemailer');
+
+// Create a transporter object using SMTP
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'your-email@gmail.com',  // Your email
+        pass: 'your-email-password'   // Your email password
+    }
+});
+
+// Email options
+const mailOptions = {
+    from: 'your-email@gmail.com',
+    to: 'recipient-email@gmail.com',
+    subject: 'Hello from Node.js',
+    text: 'This is a test email sent using Nodemailer in Node.js!'
+};
+
+// Send email
+transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+        console.error('Error sending email:', error);
+    } else {
+        console.log('Email sent successfully:', info.response);
+    }
+});
+```
+
+---
+
+### **7(a)(ii) Write a Node.js server that listens on a specified port and responds to HTTP GET requests with a JSON object.**
+
+```javascript
+const express = require('express');
+const app = express();
+const PORT = 3000;
+
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Welcome to our API!',
+        firstname: 'John',
+        lastname: 'Doe'
+    });
+});
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
+```
+
+---
+
+### **7(b)(i) Write a Node.js program that connects to MongoDB and retrieves all records from a "products" collection, displaying them in descending order by price.**
+
+```javascript
+const { MongoClient } = require('mongodb');
+
+const uri = 'mongodb://localhost:27017';  // MongoDB connection URL
+const client = new MongoClient(uri);
+
+async function fetchProducts() {
+    try {
+        await client.connect();
+        const database = client.db('store');
+        const collection = database.collection('products');
+
+        const products = await collection.find().sort({ price: -1 }).toArray();
+
+        console.log('Products sorted by price (Descending Order):', products);
+    } catch (error) {
+        console.error('Error fetching products:', error);
+    } finally {
+        await client.close();
+    }
+}
+
+fetchProducts();
+```
+
+---
+
+### **7(b)(ii) Write a Node.js program to calculate employee pay based on ID and grade.**
+
+```javascript
+const express = require('express');
+const app = express();
+const PORT = 3000;
+
+const employees = [
+    { id: 1, name: "John", grade: "A", salary: 70000 },
+    { id: 2, name: "Jane", grade: "B", salary: 50000 },
+    { id: 3, name: "Alice", grade: "C", salary: 30000 }
+];
+
+app.get('/calculatePay', (req, res) => {
+    const { id, grade } = req.query;
+    const employee = employees.find(emp => emp.id == id && emp.grade === grade);
+
+    if (employee) {
+        res.json({
+            message: 'Employee Found',
+            name: employee.name,
+            pay: employee.salary
+        });
+    } else {
+        res.status(404).json({ message: 'Employee Not Found' });
+    }
+});
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
+```
+
+---
+
+### **8(a)(i) Explain Middleware in Express.js and Routing with Example.**
+
+**Middleware in Express.js** is a function that has access to the request object (`req`), response object (`res`), and the `next()` function. Middleware is commonly used for:  
+- Authentication  
+- Logging  
+- Error Handling  
+- Data Validation  
+
+**Example Code for Routing with Middleware:**
+
+```javascript
+const express = require('express');
+const app = express();
+
+// Middleware for logging
+app.use((req, res, next) => {
+    console.log(`Request Method: ${req.method}, URL: ${req.url}`);
+    next();
+});
+
+// Route for GET /home
+app.get('/home', (req, res) => {
+    res.send('Welcome to the Home Page!');
+});
+
+// Route for POST /login
+app.post('/login', (req, res) => {
+    res.send('Login successful!');
+});
+
+app.listen(3000, () => console.log('Server is running on port 3000'));
+```
+
+---
+
+### **8(a)(ii) Explain in detail about Node and NPM Commands.**
+
+**Node.js Commands:**
+- `node filename.js` → Run a JavaScript file in Node.js.  
+- `node -v` → Display the installed Node.js version.  
+- `node` → Opens the Node.js REPL (Read-Eval-Print Loop) for testing code interactively.  
+
+**NPM (Node Package Manager) Commands:**
+- `npm init` → Initialize a new project and create a `package.json` file.  
+- `npm install <package>` → Installs a package and saves it in `node_modules`.  
+- `npm install <package> --save-dev` → Installs a package for development purposes only.  
+- `npm start` → Runs the startup script defined in `package.json`.  
+- `npm update <package>` → Updates a package to its latest version.  
+
+---
+
+### **8(b)(i) Create a React component to display marks details with state management.**
+
+```jsx
+import React, { useState } from 'react';
+
+function MarksDetails() {
+    const [marks, setMarks] = useState([
+        { subject: 'Math', score: 90 },
+        { subject: 'Science', score: 85 },
+        { subject: 'English', score: 78 }
+    ]);
+
+    const totalMarks = marks.reduce((total, mark) => total + mark.score, 0);
+
+    return (
+        <div>
+            <h2>Marks Details</h2>
+            <ul>
+                {marks.map((mark, index) => (
+                    <li key={index}>{mark.subject}: {mark.score}</li>
+                ))}
+            </ul>
+            <h3>Total Marks: {totalMarks}</h3>
+        </div>
+    );
+}
+
+export default MarksDetails;
+```
+
+---
+
+### **8(b)(ii) Explain in detail about the `package.json` file.**
+
+The `package.json` file is the core of any Node.js project. It contains metadata about the project and is essential for package management. Key fields include:
+
+- **`name`** → Project name.  
+- **`version`** → Current version of the project.  
+- **`description`** → A short description of the project.  
+- **`main`** → The entry point file (e.g., `index.js`).  
+- **`scripts`** → Custom command scripts (e.g., `start`, `test`).  
+- **`dependencies`** → List of required packages for the project.  
+- **`devDependencies`** → Packages needed only for development.  
+
+**Example `package.json` File:**
+
+```json
+{
+    "name": "my-node-project",
+    "version": "1.0.0",
+    "description": "A sample Node.js project",
+    "main": "index.js",
+    "scripts": {
+        "start": "node index.js",
+        "test": "jest"
+    },
+    "dependencies": {
+        "express": "^4.18.2"
+    },
+    "devDependencies": {
+        "jest": "^29.5.0"
+    }
+}
+```
+
+---
+
+If you need further explanations or code adjustments, let me know!

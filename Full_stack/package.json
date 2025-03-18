@@ -1,0 +1,14 @@
+{
+  "name": "exam",
+  "version": "1.0.0",
+  "description": "contains all knowledge about exam contents",
+  "main": "what is node.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "pragi",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
