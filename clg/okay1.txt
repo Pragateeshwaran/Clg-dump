@@ -1,0 +1,464 @@
+import torch
+import torch.nn as nn
+import torchvision.models as models
+import torchvision.transforms as transforms
+from torch.utils.data import Dataset, DataLoader
+from decord import VideoReader  # For video frame extraction
+import numpy as np
+
+# 1. Custom Dataset for UCF101 (minimal preprocessing)
+class UCF101Dataset(Dataset):
+    def __init__(self, video_paths, labels, seq_len=10):
+        self.video_paths = video_paths  # List of video file paths
+        self.labels = labels  # List of integer labels
+        self.seq_len = seq_len
+        self.transform = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+        ])
+        self.resnet = models.resnet18(pretrained=True).eval()  # Pre-trained CNN
+        self.resnet.fc = nn.Identity()  # Remove final layer
+    
+    def __len__(self):
+        return len(self.video_paths)
+    
+    def __getitem__(self, idx):
+        vr = VideoReader(self.video_paths[idx])
+        frame_indices = np.linspace(0, len(vr) - 1, self.seq_len).astype(int)
+        frames = vr.get_batch(frame_indices).asnumpy()
+        
+        # Extract features with ResNet
+        features = []
+        with torch.no_grad():
+            for frame in frames:
+                frame = self.transform(frame).unsqueeze(0)
+                feat = self.resnet(frame).squeeze(0)
+                features.append(feat)
+        features = torch.stack(features)
+        return features, torch.tensor(self.labels[idx])
+
+# Dummy data (replace with actual UCF101 paths and labels)
+video_paths = ['path/to/video1.avi', 'path/to/video2.avi']  # Example paths
+labels = [0, 1]  # Example: 0 = "Basketball", 1 = "Jumping"
+dataset = UCF101Dataset(video_paths, labels)
+dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+
+# 2. LSTM Model
+class VideoLSTM(nn.Module):
+    def __init__(self, input_size=512, hidden_size=128, num_classes=2):
+        super().__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, batch_first=True)
+        self.fc = nn.Linear(hidden_size, num_classes)
+    
+    def forward(self, x):
+        _, (hidden, _) = self.lstm(x)
+        return self.fc(hidden[-1])
+
+model = VideoLSTM()
+criterion = nn.CrossEntropyLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+# 3. Training
+def train_model(model, dataloader, epochs=5):
+    model.train()
+    for epoch in range(epochs):
+        total_loss = 0
+        for features, label in dataloader:
+            optimizer.zero_grad()
+            output = model(features)
+            loss = criterion(output, label)
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+        print(f"Epoch {epoch+1}, Loss: {total_loss/len(dataloader):.4f}")
+
+train_model(model, dataloader)
+
+# 4. Evaluation
+def evaluate(model, dataloader):
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for features, label in dataloader:
+            output = model(features)
+            pred = output.argmax(dim=1)
+            correct += (pred == label).sum().item()
+            total += label.size(0)
+    accuracy = correct / total * 100
+    print(f"Accuracy: {accuracy:.2f}%")
+
+evaluate(model, dataloader)
+
+
+
+
+
+
+
+
+import torch
+import torch.nn as nn
+from torchtext.datasets import Multi30k
+from torchtext.data.utils import get_tokenizer
+from torchtext.vocab import build_vocab_from_iterator
+import torch.optim as optim
+
+# 1. Load Multi30k dataset (English -> Spanish)
+train_iter = Multi30k(split='train', language_pair=('en', 'es'))
+en_tokenizer = get_tokenizer('spacy', language='en_core_web_sm')
+es_tokenizer = get_tokenizer('spacy', language='es_core_news_sm')
+
+# 2. Preprocessing
+def yield_tokens(data_iter, lang_idx):
+    for pair in data_iter:
+        yield en_tokenizer(pair[0]) if lang_idx == 0 else es_tokenizer(pair[1])
+
+en_vocab = build_vocab_from_iterator(yield_tokens(train_iter, 0), specials=['<pad>', '<sos>', '<eos>'])
+es_vocab = build_vocab_from_iterator(yield_tokens(train_iter, 1), specials=['<pad>', '<sos>', '<eos>'])
+en_vocab.set_default_index(en_vocab['<pad>'])
+es_vocab.set_default_index(es_vocab['<pad>'])
+
+def process_pair(pair, max_len=10):
+    en_seq = [en_vocab['<sos>']] + en_vocab(en_tokenizer(pair[0])[:max_len]) + [en_vocab['<eos>']]
+    es_seq = [es_vocab['<sos>']] + es_vocab(es_tokenizer(pair[1])[:max_len]) + [es_vocab['<eos>']]
+    en_seq = en_seq + [en_vocab['<pad>']] * (max_len + 2 - len(en_seq))
+    es_seq = es_seq + [es_vocab['<pad>']] * (max_len + 2 - len(es_seq))
+    return torch.tensor(en_seq), torch.tensor(es_seq)
+
+train_data = [process_pair(pair) for pair in Multi30k(split='train', language_pair=('en', 'es'))][:100]  # Limit for speed
+
+# 3. Seq2Seq Model
+class Seq2Seq(nn.Module):
+    def __init__(self, en_vocab_size, es_vocab_size, hidden_size=64):
+        super().__init__()
+        self.en_embed = nn.Embedding(en_vocab_size, 32)
+        self.es_embed = nn.Embedding(es_vocab_size, 32)
+        self.encoder = nn.LSTM(32, hidden_size, batch_first=True)
+        self.decoder = nn.LSTM(32, hidden_size, batch_first=True)
+        self.fc = nn.Linear(hidden_size, es_vocab_size)
+    
+    def forward(self, en_seq, es_seq):
+        _, (hidden, cell) = self.encoder(self.en_embed(en_seq))
+        output, _ = self.decoder(self.es_embed(es_seq), (hidden, cell))
+        return self.fc(output)
+
+model = Seq2Seq(len(en_vocab), len(es_vocab))
+criterion = nn.CrossEntropyLoss(ignore_index=es_vocab['<pad>'])
+optimizer = optim.Adam(model.parameters())
+
+# 4. Training
+def train_model(model, data, epochs=5):
+    model.train()
+    for epoch in range(epochs):
+        total_loss = 0
+        for en_seq, es_seq in data:
+            optimizer.zero_grad()
+            output = model(en_seq.unsqueeze(0), es_seq[:-1].unsqueeze(0))
+            loss = criterion(output.view(-1, len(es_vocab)), es_seq[1:].view(-1))
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+        print(f"Epoch {epoch+1}, Loss: {total_loss/len(data):.4f}")
+
+train_model(model, train_data)
+
+# 5. Evaluation
+def translate(model, sentence, max_len=10):
+    model.eval()
+    en_seq = torch.tensor([en_vocab['<sos>']] + en_vocab(en_tokenizer(sentence)[:max_len]) + [en_vocab['<eos>']]).unsqueeze(0)
+    es_seq = torch.tensor([es_vocab['<sos>']]).unsqueeze(0)
+    with torch.no_grad():
+        _, (hidden, cell) = model.encoder(model.en_embed(en_seq))
+        for _ in range(max_len):
+            output, (hidden, cell) = model.decoder(model.es_embed(es_seq[:, -1:]), (hidden, cell))
+            pred = model.fc(output).argmax(-1)
+            es_seq = torch.cat([es_seq, pred], dim=1)
+            if pred.item() == es_vocab['<eos>']:
+                break
+    return ' '.join(es_vocab.lookup_tokens(es_seq[0].tolist()[1:]))
+
+# Test
+test_sentence = "the house is big"
+translation = translate(model, test_sentence)
+print(f"Input: {test_sentence}")
+print(f"Translation: {translation}")
+
+
+
+
+
+import torch
+import torch.nn as nn
+import torchvision
+import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
+import numpy as np
+from PIL import Image
+import os
+
+# Device configuration
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+# Hyperparameters
+latent_dim = 100
+image_size = 128
+channels = 3  # RGB
+hidden_dim = 64
+batch_size = 64
+num_epochs = 200
+lr = 0.0002
+beta1 = 0.5
+
+# Data loading and preprocessing
+transform = transforms.Compose([
+    transforms.Resize((image_size, image_size)),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+])
+
+dataset = torchvision.datasets.ImageFolder(
+    root='lfw',  # Update this path
+    transform=transform
+)
+dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+# Generator
+class Generator(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.main = nn.Sequential(
+            nn.ConvTranspose2d(latent_dim, hidden_dim * 16, 4, 1, 0, bias=False),
+            nn.BatchNorm2d(hidden_dim * 16), nn.ReLU(True),
+            nn.ConvTranspose2d(hidden_dim * 16, hidden_dim * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(hidden_dim * 8), nn.ReLU(True),
+            nn.ConvTranspose2d(hidden_dim * 8, hidden_dim * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(hidden_dim * 4), nn.ReLU(True),
+            nn.ConvTranspose2d(hidden_dim * 4, hidden_dim * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(hidden_dim * 2), nn.ReLU(True),
+            nn.ConvTranspose2d(hidden_dim * 2, channels, 4, 2, 1, bias=False),
+            nn.Tanh()
+        )
+    
+    def forward(self, x):
+        return self.main(x)
+
+# Discriminator
+class Discriminator(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.main = nn.Sequential(
+            nn.Conv2d(channels, hidden_dim, 4, 2, 1, bias=False),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(hidden_dim, hidden_dim * 2, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(hidden_dim * 2), nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(hidden_dim * 2, hidden_dim * 4, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(hidden_dim * 4), nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(hidden_dim * 4, hidden_dim * 8, 4, 2, 1, bias=False),
+            nn.BatchNorm2d(hidden_dim * 8), nn.LeakyReLU(0.2, inplace=True),
+            nn.Conv2d(hidden_dim * 8, 1, 4, 1, 0, bias=False),
+            nn.Sigmoid()
+        )
+    
+    def forward(self, x):
+        return self.main(x)
+
+# Initialize models and optimizers
+G = Generator().to(device)
+D = Discriminator().to(device)
+g_optimizer = torch.optim.Adam(G.parameters(), lr=lr, betas=(beta1, 0.999))
+d_optimizer = torch.optim.Adam(D.parameters(), lr=lr, betas=(beta1, 0.999))
+
+# Loss function
+criterion = nn.BCELoss()
+
+# Training loop
+real_label = 1.
+fake_label = 0.
+
+for epoch in range(num_epochs):
+    for i, (images, _) in enumerate(dataloader):
+        batch_size = images.size(0)
+        images = images.to(device)
+        
+        # Train Discriminator
+        D.zero_grad()
+        label = torch.full((batch_size,), real_label, device=device)
+        output = D(images).view(-1)
+        d_loss_real = criterion(output, label)
+        d_loss_real.backward()
+        
+        noise = torch.randn(batch_size, latent_dim, 1, 1, device=device)
+        fake = G(noise)
+        label.fill_(fake_label)
+        output = D(fake.detach()).view(-1)
+        d_loss_fake = criterion(output, label)
+        d_loss_fake.backward()
+        d_optimizer.step()
+        
+        # Train Generator
+        G.zero_grad()
+        label.fill_(real_label)
+        output = D(fake).view(-1)
+        g_loss = criterion(output, label)
+        g_loss.backward()
+        g_optimizer.step()
+    
+    # Visualize progress
+    if epoch % 10 == 0:
+        print(f'Epoch [{epoch}/{num_epochs}] D_loss: {d_loss_real + d_loss_fake:.4f} G_loss: {g_loss:.4f}')
+        with torch.no_grad():
+            fake = G(torch.randn(16, latent_dim, 1, 1, device=device)).detach().cpu()
+            grid = torchvision.utils.make_grid(fake, nrow=4, normalize=True)
+            plt.imshow(np.transpose(grid, (1, 2, 0)))
+            plt.axis('off')
+            plt.show()
+        
+        # Save checkpoint
+        torch.save(G.state_dict(), f'generator_epoch_{epoch}.pth')
+        torch.save(D.state_dict(), f'discriminator_epoch_{epoch}.pth')
+
+# Generate final samples
+with torch.no_grad():
+    fake_images = G(torch.randn(8, latent_dim, 1, 1, device=device)).detach().cpu()
+    grid = torchvision.utils.make_grid(fake_images, nrow=4, normalize=True)
+    plt.imshow(np.transpose(grid, (1, 2, 0)))
+    plt.axis('off')
+    plt.show()
+
+
+
+
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import matplotlib.pyplot as plt
+import numpy as np
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+# Device configuration (TensorFlow handles this automatically)
+
+# Hyperparameters
+latent_dim = 100
+image_size = 128
+channels = 3  # RGB
+hidden_dim = 64
+batch_size = 64
+num_epochs = 200
+lr = 0.0002
+beta1 = 0.5
+
+# Data loading and preprocessing
+data_gen = ImageDataGenerator(
+    rescale=1./255,
+    preprocessing_function=lambda x: (x - 0.5) * 2  # Normalize to [-1, 1]
+)
+dataset = data_gen.flow_from_directory(
+    'lfw',  # Update this path
+    target_size=(image_size, image_size),
+    batch_size=batch_size,
+    class_mode=None,
+    shuffle=True
+)
+
+# Generator
+def build_generator():
+    model = models.Sequential([
+        layers.Input(shape=(latent_dim,)),
+        layers.Reshape((1, 1, latent_dim)),
+        layers.Conv2DTranspose(hidden_dim * 16, 4, strides=1, padding='valid', use_bias=False),
+        layers.BatchNormalization(), layers.ReLU(),
+        layers.Conv2DTranspose(hidden_dim * 8, 4, strides=2, padding='same', use_bias=False),
+        layers.BatchNormalization(), layers.ReLU(),
+        layers.Conv2DTranspose(hidden_dim * 4, 4, strides=2, padding='same', use_bias=False),
+        layers.BatchNormalization(), layers.ReLU(),
+        layers.Conv2DTranspose(hidden_dim * 2, 4, strides=2, padding='same', use_bias=False),
+        layers.BatchNormalization(), layers.ReLU(),
+        layers.Conv2DTranspose(channels, 4, strides=2, padding='same', use_bias=False, activation='tanh')
+    ])
+    return model
+
+# Discriminator
+def build_discriminator():
+    model = models.Sequential([
+        layers.Input(shape=(image_size, image_size, channels)),
+        layers.Conv2D(hidden_dim, 4, strides=2, padding='same', use_bias=False),
+        layers.LeakyReLU(0.2),
+        layers.Conv2D(hidden_dim * 2, 4, strides=2, padding='same', use_bias=False),
+        layers.BatchNormalization(), layers.LeakyReLU(0.2),
+        layers.Conv2D(hidden_dim * 4, 4, strides=2, padding='same', use_bias=False),
+        layers.BatchNormalization(), layers.LeakyReLU(0.2),
+        layers.Conv2D(hidden_dim * 8, 4, strides=2, padding='same', use_bias=False),
+        layers.BatchNormalization(), layers.LeakyReLU(0.2),
+        layers.Conv2D(1, 4, strides=1, padding='valid', use_bias=False, activation='sigmoid')
+    ])
+    return model
+
+# Initialize models and optimizers
+G = build_generator()
+D = build_discriminator()
+g_optimizer = tf.keras.optimizers.Adam(lr, beta_1=beta1)
+d_optimizer = tf.keras.optimizers.Adam(lr, beta_1=beta1)
+loss_fn = tf.keras.losses.BinaryCrossentropy()
+
+# Training step
+@tf.function
+def train_step(images):
+    batch_size = tf.shape(images)[0]
+    noise = tf.random.normal([batch_size, latent_dim])
+    
+    with tf.GradientTape() as g_tape, tf.GradientTape() as d_tape:
+        fake = G(noise, training=True)
+        real_output = D(images, training=True)
+        fake_output = D(fake, training=True)
+        
+        d_loss_real = loss_fn(tf.ones_like(real_output), real_output)
+        d_loss_fake = loss_fn(tf.zeros_like(fake_output), fake_output)
+        d_loss = d_loss_real + d_loss_fake
+        g_loss = loss_fn(tf.ones_like(fake_output), fake_output)
+    
+    d_grads = d_tape.gradient(d_loss, D.trainable_variables)
+    g_grads = g_tape.gradient(g_loss, G.trainable_variables)
+    d_optimizer.apply_gradients(zip(d_grads, D.trainable_variables))
+    g_optimizer.apply_gradients(zip(g_grads, G.trainable_variables))
+    return d_loss, g_loss
+
+# Training loop
+step = 0
+for epoch in range(num_epochs):
+    for images in dataset:
+        step += 1
+        d_loss, g_loss = train_step(images)
+        
+        if step % (len(dataset) // 10) == 0:  # Visualize every ~10% of epoch
+            print(f'Epoch [{epoch}/{num_epochs}] Step [{step}] D_loss: {d_loss:.4f} G_loss: {g_loss:.4f}')
+            noise = tf.random.normal([16, latent_dim])
+            fake = G(noise, training=False)
+            fake = (fake + 1) / 2  # Rescale to [0, 1]
+            grid = tf.transpose(tf.make_ndarray(tf.make_tensor_proto(fake)), [0, 2, 1, 3])
+            grid = np.reshape(grid, (4, 4, image_size, image_size, channels))
+            grid = np.transpose(np.concatenate(np.concatenate(grid, axis=1), axis=1), (1, 0, 2))
+            plt.imshow(grid)
+            plt.axis('off')
+            plt.show()
+        
+        if step >= len(dataset):
+            break
+    
+    # Save checkpoints
+    if epoch % 10 == 0:
+        G.save_weights(f'generator_epoch_{epoch}.h5')
+        D.save_weights(f'discriminator_epoch_{epoch}.h5')
+
+# Generate final samples
+noise = tf.random.normal([8, latent_dim])
+fake_images = G(noise, training=False)
+fake_images = (fake_images + 1) / 2  # Rescale to [0, 1]
+grid = tf.transpose(tf.make_ndarray(tf.make_tensor_proto(fake_images)), [0, 2, 1, 3])
+grid = np.reshape(grid, (2, 4, image_size, image_size, channels))
+grid = np.transpose(np.concatenate(np.concatenate(grid, axis=1), axis=1), (1, 0, 2))
+plt.imshow(grid)
+plt.axis('off')
+plt.show()
