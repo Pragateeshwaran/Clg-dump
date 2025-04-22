@@ -1,0 +1,105 @@
+const express = require('express');
+const bodyParser = require('body-parser');
+const { MongoClient } = require('mongodb');
+
+const app = express();
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+
+const uri = 'mongodb://localhost:27017';
+const dbName = 'petsurvey';
+
+let db, surveyCollection;
+
+// Connect to MongoDB using function(err, client)
+MongoClient.connect(uri, function(err, client) {
+    if (err) {
+        console.error('Failed to connect to MongoDB', err);
+        return;
+    }
+
+    db = client.db(dbName);
+    surveyCollection = db.collection('surveys');
+    console.log(`Connected to database: ${dbName}`);
+});
+
+// Serve the HTML form
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/survey.html');
+});
+
+// Handle form submission
+app.post('/submit', async (req, res) => {
+    try {
+        // Insert survey data into the collection
+        await surveyCollection.insertOne(req.body);
+
+        // Aggregate results by pet type
+        const results = await surveyCollection.aggregate([
+            { $group: { _id: "$petType", count: { $sum: 1 } } }
+        ]).toArray();
+
+        res.send(`Thank you for participating! Here are the overall results: ${JSON.stringify(results)}`);
+    } catch (err) {
+        res.status(500).send("Error saving survey data.");
+    }
+});
+
+// Start the server
+app.listen(3030, () => {
+    console.log('Server is running on port 3030');
+});
+
+-------------------------------------------------------------------------------------------------------------------------------
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pet Animal Survey</title>
+</head>
+<body>
+    <center>
+        <h1>Pet Animal Survey</h1>
+        <form action="/submit" method="POST">
+            <label for="petowner">Owner name:</label>
+            <input type="text" id="petowner" name="petowner" required><br><br>
+
+            <label for="petType">What type of pet do you own?</label>
+            <select id="petType" name="petType">
+                <option value="Dog">Dog</option>
+                <option value="Cat">Cat</option>
+                <option value="Bird">Bird</option>
+                <option value="Fish">Fish</option>
+                <option value="Other">Other</option>
+            </select><br><br>
+
+            <label for="numberOfPets">How many pets do you own?</label>
+            <input type="number" id="numberOfPets" name="numberOfPets" required><br><br>
+
+            <label for="reasonForPet">What is the primary reason for owning a pet?</label>
+            <select id="reasonForPet" name="reasonForPet">
+                <option value="Companionship">Companionship</option>
+                <option value="Security">Security</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Other">Other</option>
+            </select><br><br>
+
+            <label for="monthlySpending">How much do you spend on your pet monthly?</label>
+            <select id="monthlySpending" name="monthlySpending">
+                <option value="Less than 50">Less than 50</option>
+                <option value="50-100">50-100</option>
+                <option value="100-200">100-200</option>
+                <option value="More than 200">More than 200</option>
+            </select><br><br>
+
+            <label for="adoptOrBuy">Do you prefer adopting or buying a pet?</label>
+            <select id="adoptOrBuy" name="adoptOrBuy">
+                <option value="Adopt">Adopt</option>
+                <option value="Buy">Buy</option>
+            </select><br><br>
+
+            <button type="submit">Submit</button>
+        </form>
+    </center>
+</body>
+</html>
